@@ -77,8 +77,8 @@ map_2 <- tm_shape(background_bu, bbox = boundary_di_bu) +
   tm_polygons(scale = 4, col = "deepskyblue3", alpha = 0.5, border.alpha = 0) + 
   tm_shape(boundary_li) +
   tm_lines(scale = 4, col = "red") +
-  tm_credits(paste("Service areas with Euclidean distance buffer method is",as.character(round(area_ED/1000000)),"km2"), position=c("left", "bottom"))
-  
+  tm_credits(expression("Service areas with Euclidean distance buffer method is"~13~"km"^2), position=c("left", "bottom"))
+
 map_2
 ```
 line-based network 50m-buffer method and service areas
@@ -98,7 +98,7 @@ map_3 <- tm_shape(background_bu, bbox = boundary_di_bu) +
   tm_polygons(scale = 4, col = "deepskyblue3", alpha = 0.5, border.alpha = 0) + 
   tm_shape(boundary_li) +
   tm_lines(scale = 4, col = "red") +
-  tm_credits(paste("Service areas with line-based network 50m-buffer method is",as.character(round(area_RD/1000000)),"km2"), position=c("left", "bottom"))
+  tm_credits(expression("Service areas with line-based network 50m-buffer method is"~4~"km"^2), position=c("left", "bottom"))
   
 map_3
 ```
