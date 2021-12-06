@@ -31,7 +31,7 @@ I collected data from my own previous research projects. Most of them are from B
 * Residential building points of interest around Xuanwu Lake Park (Point)
 * Xuanwu Lake Park entrances (Point)
 * Walking routes (Line): According to the policy of the 15-Minute Community-Life Circle, a 15-min walk to parks is important for residents in China, which corresponds to about a 1000-m distance (Shanghai Administration Bureau, 2016). I called the travel navigation function of Baidu Map to scrape recommended walking routes from residential buildings to the entrances of Xuanwu Lake Park, with a 15-min duration as the threshold. This data also includes the information of route distance, euclidean distance, duration, the number of turns, the number of crossings, starting, and ending points.
-* Community Boundaries around Xuanwu Lake Park (Polygon), which includes the information of population.
+* Community Boundaries around Xuanwu Lake Park (Polygon)
 
 ### Walking route data
 ```{r, message=F, warning=F}
