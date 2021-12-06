@@ -5,23 +5,35 @@ subtitle: A Case Study in Xuanwu Lake Park, China
 output:
   html_document:
     code_folding: show
+    number_sections: true
 ---
 
 # Introduction
 
-The propensity for visiting urban parks is affected by the park’s attractiveness and travel convenience, where walking provides the most basic and fair access. Walking routes from residences to parks, in terms of duration and perception, have received insufficient attention in the literature. Using the case study of Xuanwu Lake Park in China, I acquired walking routes from residences to the park through open-source data scraping in order to depict the pedestrian shed and pedestrian environment reasonably along these routes.
+Visiting parks provides considerable health benefits, including supporting physical activity, reducing the risk of obesity, and improving the life expectancy of citizens (Blanck, et al., 2012; Takano, et al., 2002). Whether people walk to a park is usually affected by the park’s attractiveness and their walking experience (Rigolon et al., 2018). The latter is associated with the walking distance to the park and relevant urban design features along
+the route, which have received insufficient attention, compared to the facilities and environments within parks. Environmental factors have been found to influence people’s walking choices around parks (Owen et al., 2004). For example, routes to the park that cover long distances, potential traffic injury risks, and poor pedestrian environments could be substantial barriers for park visitors. Furthermore, the walkability of streets near parks has been particularly correlated to pedestrian perceptions of safety. Therefore, analysis of walking routes to parks provides a promising approach to understand the physical environment around parks, which may facilitate predicting public health benefits for people and environmental benefits for cities.
 
-Import packages
+With Xuanwu Lake Park as a case study, I use the walking routes recommended by online map services to depict two basic aspects of walkable routes to the park: distance from home to park and pedestrian environment along the route. The objective measurements are synthesized to delineate the pedestrian shed rapidly and audit the walking route environment objectively. 
+
+# Materials and methods
+## Import packages
 ```{r, message=F, warning=F}
 library(sf)
 library(tidyverse)
 library(tmap)
 library(leaflet)
 library(DT)
-# knitr::opts_chunk$set(cache=TRUE)  # cache the results for quick compiling
 ```
 
-Upload walking route data
+## Data import and demostration
+I collected data from my own previous research projects. Most of them are from Baidu Map API.
+
+* Residential building points of interest around Xuanwu Lake Park (Point)
+* Xuanwu Lake Park entrances (Point)
+* Walking routes (Line): According to the policy of the 15-Minute Community-Life Circle, a 15-min walk to parks is important for residents in China, which corresponds to about a 1000-m distance (Shanghai Administration Bureau, 2016). I called the travel navigation function of Baidu Map to scrape recommended walking routes from residential buildings to the entrances of Xuanwu Lake Park, with a 15-min duration as the threshold. This data also includes the information of route distance, euclidean distance, duration, the number of turns, the number of crossings, starting, and ending points.
+* Community Boundaries around Xuanwu Lake Park (Polygon), which includes the information of population.
+
+### Walking route data
 ```{r, message=F, warning=F}
 walkroutes <- read_csv("data/Walking routes.csv")
 walkroutes_ta <- subset(walkroutes, select=-c(geometry))
@@ -30,9 +42,7 @@ DT::datatable(walkroutes_ta %>% head(30),
               caption = "Table 1: Samples of the walking route data.")
 ```
 
-According to the policy of the 15-Minute Community-Life Circle, a 15-min walk to parks is important for residents in China, which corresponds to about a 1000-m distance. I called the travel navigation function of online map to scrape recommended walking routes from residential buildings to the entrances of Xuanwu Lake Park, with a 15-min duration as the threshold. This data also includes the information of route distance, euclidean distance, the number of turns, the number of crossings, starting, and ending points.
-
-Process and spatialize data
+### Upload and spatialize data
 ```{r, message=F, warning=F}
 walkroutes_sf <- st_as_sf(walkroutes, wkt = "geometry",  crs=4326)
 ori_points <- st_as_sf(walkroutes_ta, coords = c("ori_lng_84","ori_lat_84"),  crs=4326)
@@ -42,7 +52,7 @@ boundary_li = st_cast(boundary, "LINESTRING")
 AOIs <- read_sf("data/Community boundary.shp")
 ```
 
-Show whole data set
+Show the whole data set
 ```{r, fig.align = "center", message=F, warning=F}
 current.mode <- tmap_mode("view")
 bound_box <- c(left = 118.7772332, bottom = 32.0550625, right = 118.8104844, top = 32.0902245)
@@ -61,7 +71,7 @@ map_1 <- tm_basemap(leaflet::providers$Esri.WorldTopoMap, alpha = 0.4) +
 map_1
 ```
 
-Noted that the orange points are park entrances, green points are residential building POIs, blue lines are walking routes, grey polygons are community boundaries, red line are park boundary.
+Noted that the orange points are park entrances, green points are residential building POIs, blue lines are walking routes, red line are park boundary, grey polygons are community boundaries.
 
 A reasonable walking distance is necessary for daily park users. There are many measurement to define pedestrian shed.
 
@@ -117,3 +127,23 @@ tmap_arrange(map_2, map_3, nrow = 1)
 ```
 
 This image proposed a line-based network buffer method that defined areas near the center line of routes as accessible, which is more accurate, as it is closer to the actual environment available to pedestrians. As you can see in Map2 and Map3, the service areas determined by the route-based method were significantly less than those by Euclidean distance buffer method, which the ratio is `r as.numeric(round(round(area_RD/1000000)/round(area_ED/1000000), 2))`.
+
+
+
+
+
+
+
+
+
+
+
+Owen, N.; Humpel, N.; Leslie, E.; Bauman, A.; Sallis, J.F. Understanding environmental influences on walking: Review and research agenda. Am. J. Prev. Med. 2004, 27, 67–76.
+
+Rigolon, A.; Toker, Z.; Gasparian, N. Who has more walkable routes to parks? An environmental justice study of safe routes to parks in neighborhoods of Los Angeles. J. Urban Aff. 2018, 40, 576–591. 
+
+Blanck, H.M.; Allen, D.; Bashir, Z.; Gordon, N.; Goodman, A.; Merriam, D.; Candace, R. Let’s go to the park today: The role of parks in obesity prevention and improving the public’s health. Child. Obes. 2012 , 8, 423–428.
+
+Takano, T.; Nakamura, K.; Watanabe, M. Urban residential environments and senior citizens’ longevity in megacity areas: The importance of walkable green spaces. J. Epidemiol. Community Health 2002 , 56, 913–918.
+
+Shanghai Urban Planning and Land Resources Administration Bureau. Planning Guidance of 15-Minute Community-Life Circle, 1st ed.; Shanghai Urban Planning and Land Resources Administration Bureau: Shanghai, China, 2016; pp. 21–46.
