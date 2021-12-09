@@ -8,7 +8,7 @@ output:
     number_sections: true
 ---
 
-# Introduction
+# Introduction 
 
 Visiting parks provides considerable health benefits, including supporting physical activity, reducing the risk of obesity, and improving the life expectancy of citizens (Blanck, et al., 2012; Takano, et al., 2002). Whether people walk to a park is usually affected by the park’s attractiveness and their walking experience (Rigolon et al., 2018). The latter is associated with the walking distance to the park and relevant urban design features along
 the route, which have received insufficient attention, compared to the facilities and environments within parks. Environmental factors have been found to influence people’s walking choices around parks (Owen et al., 2004). For example, routes to the park that cover long distances, potential traffic injury risks, and poor pedestrian environments could be substantial barriers for park visitors. Furthermore, the walkability of streets near parks has been particularly correlated to pedestrian perceptions of safety. Therefore, analysis of walking routes to parks provides a promising approach to understand the physical environment around parks, which may facilitate predicting public health benefits for people and environmental benefits for cities.
