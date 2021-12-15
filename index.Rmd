@@ -16,6 +16,7 @@ With Xuanwu Lake Park as a case study, I use the walking routes recommended by o
 # Materials and methods
 ## Import packages
 ```{r, message=F, warning=F}
+library(tidyverse)
 library(dplyr)
 library(ggplot2)
 library(sf)
