@@ -1,105 +1,333 @@
 ---
-title: "My Final Project Template"
-author: Your name here
-subtitle: Subtitle here if desired
+title: "Detecting the pedestrian shed and walking experence of urban parks with open-source data"
+author: Ryan Zhenqi Zhou
+subtitle: A Case Study in Xuanwu Lake Park, China
+output:
+  html_document:
+    number_sections: true
 ---
 
 # Introduction
+Visiting parks provides considerable health benefits, including supporting physical activity, reducing the risk of obesity, and improving the life expectancy of citizens (Blanck, et al., 2012; Takano, et al., 2002). Whether people walk to a park is usually affected by the park’s attractiveness and their walking experience (Rigolon et al., 2018). The latter is associated with the walking distance to the park and relevant urban design features along
+the route, which have received insufficient attention compared to the facilities and environments within parks. Environmental factors have been found to influence people’s walking choices around parks (Owen et al., 2004). For example, routes to the park that cover long distances, potential traffic injury risks, and poor pedestrian environments could be substantial barriers for park visitors. Furthermore, the walkability of streets near parks has been particularly correlated to pedestrian perceptions of safety. Therefore, analysis of walking routes to parks provides a promising approach to understand the walking experience around parks, which may facilitate predicting public health benefits for people and environmental benefits for cities.
 
-[~ 200 words]
-
-Clearly stated background and questions / hypotheses / problems being addressed. Sets up the analysis in an interesting and compelling way.
+With Xuanwu Lake Park as a case study, I use the walking routes recommended by online map services to depict two basic aspects of walkable routes to the park: distance from home to park and walking experience along the route. The objective measurements are synthesized to delineate the pedestrian shed rapidly and audit the walking experience objectively. 
 
 # Materials and methods
-
-[~ 200 words]
-
-Narrative: Clear narrative description of the data sources and methods. Includes data from at least two sources that were integrated / merged in R.
-
-Code: The code associated with the project is well organized and easy to follow. Demonstrates mastery of R graphics and functions.
-
-Data: The underlying data are publicly accessible via the web and downloaded/accessed within the Rmd script. If you want to use your own data, you must make it available on a website (e.g. Figshare) so that others are able to re-run your code.
-
-You can do bullets like this:
-
-* The first most important thing
-* The second most important thing
-* The third most important thing
-
-You can do numbers like this:
-
-1. The first most important thing
-2. The second most important thing
-3. The third most important thing
-
-See [http://rmarkdown.rstudio.com/](http://rmarkdown.rstudio.com/) for all the amazing things you can do.
-
-
-Here's my first code chunk.
-```{r}
-1+2
-```
-
-Load any required packages in a code chunk (you may need to install some packages):
-
+## Import packages
 ```{r, message=F, warning=F}
 library(tidyverse)
+library(dplyr)
+library(sf)
+library(tmap)
 library(leaflet)
-library(kableExtra)
-knitr::opts_chunk$set(cache=TRUE)  # cache the results for quick compiling
+library(ggplot2)
+library(DT)
 ```
 
-## Download and clean all required data
-```{r}
-n=20
-data=data.frame(x=runif(n,-180,180),
-                y=runif(n,-60,60),
-                size = runif(n, 5, 20),
-                category = factor(
-                  sample(letters[1:5], n, replace = TRUE)
-                  ),
-                value = rnorm(n))
+## Data loading and demostration
+I collect data from my own previous research projects. Most of them are downloaded from the Baidu Map API (Baidu Map API, 2020).
+
+* Xuanwu Lake Park entrances (Points)
+* Walking routes (Lines): According to the policy of the 15-Minute Community-Life Circle, a 15-min walk to parks is important for residents in China, which corresponds to about a 1000-m distance (Shanghai Administration Bureau, 2016). I call the travel navigation function of Baidu Map to scrape recommended walking routes from residential buildings to the entrances of Xuanwu Lake Park, with a 15-min duration as the threshold. This data also includes the information of route distance, euclidean distance, duration, the number of turns, the number of crossings, communities, starting, and ending points.
+* Xuanwu Lake Park boundary (Polygon)
+* Community boundaries around Xuanwu Lake Park (Polygons)
+
+### Walking route data
+```{r, message=F, warning=F}
+walkroutes <- read_csv("data/Walking routes.csv")
+walkroutes_ta <- subset(walkroutes, select=-c(geometry))
+
+DT::datatable(walkroutes_ta %>% head(30),
+              options = list(pageLength = 5), 
+              caption = "Table 1. Walking route data.")
 ```
 
-```{r, results='asis'}
-data %>% 
-  slice(1:10) %>% #show only 1:n rows
-  kable(digits=2,align="c")%>% #make table and round to two digits
-  kable_styling(bootstrap_options = 
-                  c("striped", "hover", "condensed", "responsive")) #apply other formatting
+### Load and spatialize data
+```{r, message=F, warning=F}
+walkroutes_sf <- st_as_sf(walkroutes, wkt = "geometry",  crs=4326)
+park_entre <- read_csv("data/Park entraces.csv")
+park_entre_sf <- st_as_sf(park_entre, wkt = "geometry",  crs=4326)
+des_points <- st_as_sf(walkroutes_ta, coords = c("des_lng_84","des_lat_84"),  crs=4326)
+boundary <- read_sf("data/Park Boundary.shp")
+boundary_li = st_cast(boundary, "LINESTRING")
+AOIs <- read_sf("data/Community boundary.shp")
 ```
 
-Add any additional processing steps here.
+### Data visualization
+```{r fig.align="center", message=FALSE, warning=FALSE}
+current.mode <- tmap_mode("view")
+bound_box <- st_buffer(boundary, 500)
+
+map_1 <- tm_basemap(leaflet::providers$Esri.WorldTopoMap, alpha = 0.4) +
+  tm_shape(boundary_li, bbox = bound_box) +
+  tm_lines(scale = 4, col = "red") + 
+  tm_shape(AOIs) + 
+  tm_polygons(size = 0.06, col = "azure3", border.alpha = 0) +
+  tm_shape(walkroutes_sf) +
+  tm_lines(scale = 0.5, col = "blue") +
+  tm_shape(park_entre_sf) +
+  tm_symbols(size = 0.1, col = "goldenrod1") +
+  tm_text("park_entrance", size = 1) +
+  tm_shape(des_points) +
+  tm_symbols(size = 0.06, col = "chartreuse", border.alpha = 0) +
+  tm_layout(title = 'Figure 1. Fifteen-minute walking routes around Xuanwu Lake Park.')
+   
+map_1
+```
+
+Note that the orange points are park entrances, green points are residential building POIs, blue lines are walking routes, the red line is the park boundary, and grey polygons are community boundaries.
+
+## Indices
+The park’s pedestrian shed is delineated by walking routes presumably reached within 15 min. By virtue of these walking routes, I develop six indices which related to the walking routes to the park. The former covers two indices of the service capacity: service POIs and service area, while the latter covers four indices of the walking experience: route distance, pedestrian route directness (PRD), the number of turns, and the number of crossings (Table 2).
+
+### Indices relevant to the walking routes to the park
+![](data/Table 2/Table 2.png)
 
 # Results
+Using open-source data from the online map in this project, I analyze the service capacity and walking experience in Xuanwu Lake Park at three levels: the entire park, the park entrances, and routes from communities to the park.
 
-[~200 words]
+## Serivce area at park level {.tabset}
+A reasonable walking distance is necessary for daily park users. There are many measurement to define service area of the park such as euclidean distance buffer method, line-based network 50m-buffer method, and community boundary method.
 
-Tables and figures (maps and other graphics) are carefully planned to convey the results of your analysis. Intense exploration and evidence of many trials and failures. The author looked at the data in many different ways before coming to the final presentation of the data.
+As you can see in these three methods (Figure 2), the service area determined by the line-based method and community boundary method are significantly less than the euclidean distance buffer method. The line-based network buffer method and community boundary method are more accurate, as they are closer to the actual environment available to pedestrians. 
 
-Show tables, plots, etc. and describe them.
+### Euclidean distance buffer method {.unnumbered}
+```{r, Euclidean distance buffer method, fig.align = "center", message=F, warning=F}
+background_bu <- read_sf("data/Background buildings.shp")
+background_ro <- read_sf("data/Background routes.shp")
 
-```{r, fig.width=6, fig.height=3, fig.cap="Map of completely random data"}
-m <- leaflet(data) %>% 
-  addTiles() %>% 
-  addCircleMarkers(~x, ~y, radius = ~size,color = ~as.factor(category)) %>% 
-  addPopups(~x[2], ~y[2], "Random popup")
-m  # a map with the default OSM tile layer
+boundary_li_pro <- st_transform(boundary_li, "EPSG:32650")
+boundary_pro <- st_transform(boundary, "EPSG:32650")
+boundary_bu <- st_buffer(boundary_li_pro, 1000)
+boundary_di <- st_difference(boundary_bu, boundary_pro)
+area_ED <- st_area(boundary_di)
+
+current.mode <- tmap_mode("plot")
+boundary_di_bu <- st_buffer(boundary_di, 500)
+map_2 <- tm_shape(background_bu, bbox = boundary_di_bu) +
+  tm_polygons(col = "azure2", border.alpha = 0) + 
+  tm_shape(background_ro) +
+  tm_lines(scale = 0.5, col = "azure2") +
+  tm_shape(boundary_di) +
+  tm_polygons(scale = 4, col = "deepskyblue3", alpha = 0.5, border.alpha = 0) + 
+  tm_shape(boundary_li) +
+  tm_lines(scale = 4, col = "red") +
+  tm_credits(expression("Service area:"~13~"km"^2), position=c("left", "bottom")) +
+  tm_layout(title= 'Figure 2(a). Service area by euclidean distance buffer method.', title.size = 0.8, frame = F)
+
+map_2
 ```
 
+### Line-based network 50m-buffer method {.unnumbered} 
+```{r, Line-based network 50m-buffer method, fig.align = "center", message=F, warning=F}
+walkroutes_pro <- st_transform(walkroutes_sf, "EPSG:32650")
+walkroutes_pro_un <- st_union(walkroutes_pro)
+walkroutes_bu <- st_buffer(walkroutes_pro_un, 50)
+walkroutes_di <- st_difference(walkroutes_bu, boundary_pro)
+area_RD <- st_area(walkroutes_di)
 
-```{r}
-data %>% 
-  ggplot(aes(x=x,y=y,col=category))+
-  geom_point()
+current.mode <- tmap_mode("plot")
+map_3 <- tm_shape(background_bu, bbox = boundary_di_bu) +
+  tm_polygons(col = "azure2", border.alpha = 0) + 
+  tm_shape(background_ro) +
+  tm_lines(scale = 0.5, col = "azure2") +
+  tm_shape(walkroutes_di) +
+  tm_polygons(scale = 4, col = "deepskyblue3", alpha = 0.5, border.alpha = 0) + 
+  tm_shape(boundary_li) +
+  tm_lines(scale = 4, col = "red") +
+  tm_credits(expression("Service area:"~4~"km"^2), position=c("left", "bottom")) +
+  tm_layout(title= 'Figure 2(b). Service area by line-based network 50m-buffer method.', title.size = 0.8, frame = F)
+  
+map_3
+```
+
+### Community boundary method {.unnumbered} 
+```{r, Community boundary method, fig.align = "center", message=F, warning=F}
+area_CB <- sum(AOIs$area)
+
+current.mode <- tmap_mode("plot")
+map_4 <- tm_shape(background_bu, bbox = boundary_di_bu) +
+  tm_polygons(col = "azure2", border.alpha = 0) + 
+  tm_shape(background_ro) +
+  tm_lines(scale = 0.5, col = "azure2") +
+  tm_shape(AOIs) +
+  tm_polygons(scale = 4, col = "deepskyblue3", alpha = 0.5, border.alpha = 0) + 
+  tm_shape(boundary_li) +
+  tm_lines(scale = 4, col = "red") +
+  tm_credits(expression("Service area:"~2~"km"^2), position=c("left", "bottom")) +
+  tm_layout(title= 'Figure 2(c). Service area by community boundary method.', title.size = 0.8, frame = F)
+  
+map_4
+```
+
+## Serivce POIs of park entrances
+### Calculate how many residential building POIs each entrence serves
+```{r, message=FALSE, warning=FALSE}
+entrance_pois <- group_by(walkroutes, park_entrance) %>%
+  summarise(., count = n()) %>%
+  arrange(desc(count))
+set.seed(42)
+entrance_pois$random = runif(26, -1.6, 1.6) 
+
+entrance_pois1 <- entrance_pois
+entrance_pois2 <- entrance_pois1[entrance_pois1$count > 100 | entrance_pois1$count < 28, ]
+```
+
+### Create a scatter-box plot
+```{r fig.align="center", message=FALSE, warning=FALSE}
+plot1 <- ggplot(entrance_pois) +
+  stat_boxplot(aes(x = count), geom = "errorbar",width=0.4) +
+  geom_boxplot(aes(x = count), fill='azure3', color="black") +
+  geom_point(aes(x = count, y = random), size = 5, color = "chocolate1", alpha = 0.7) +
+  geom_text(data = entrance_pois2, aes(x = count+5, y = random-0.08), label = paste(entrance_pois2$park_entrance), colour = "gray21",size = 3.5) +
+  ylim(-1.6,1.6) +
+  xlab("Service POIs") +
+  ylab("") +
+  labs(title = "Figure 3. Service POIs of park entrances.") +
+  theme_gray() +
+  theme(axis.text.y = element_blank(),
+        axis.ticks.y = element_blank(),
+        plot.title = element_text(size = 12))
+
+plot1
+```
+
+The service POIs across different entrances varied significantly, due to the extensive interface of Xuanwu Lake Park with various parts of the city (Figure 3). Entrances 8, 9, 26, and 1, which are located to the west and north of Xuanwu Lake Park, serve more POIs: 217, 141, 123, and 118 POIs, respectively. Entrances 25, 24, and 22, located to the north of the park, serve fewer POIs: 24, 15, and 9 POIs, respectively. Entrance 11 serves the least POIs, just 6.
+
+## Walking experience of the routes from communities to the park {.tabset}
+Taking the community boundary as the analysis unit, I analyze the walking experience from communities to the park. The walking experience of route analysis coveres the criteria of route distance, PRD, the number of turns, and the number of crossings.
+
+The results (Figure 4) show that within a 15-min (1000 m) walking range, in the east of Xuanwu Lake Park, the walking distance is long, and in the southwest, the walking distance is short; the southeast and northwest of Xuanwu Lake Park have a low PRD, mostly lower than 1.3. From the analysis, it can be seen that the roadways, water bodies, closed communities, and Ming city wall are the main factors causing high PRD in some routes; the number of turns in the communities connecting to No.23 is high; the communities connecting to No.26 generally needs to cross the road three or four times to reach the Xuanwu Lake Park.
+
+### Route distance {.unnumbered} 
+```{r, Route Distance, fig.align = "center", message=F, warning=F}
+walkroutes$PRD = walkroutes$route_dis / walkroutes$euclidean_dis
+walkroutes_communi <- group_by(walkroutes, community) %>%
+  summarize_each(funs(mean))
+walkroutes_communi1 <- walkroutes_communi[ , -which(colnames(walkroutes_communi) %in% c("park_entrance","ori_lng_84","ori_lat_84","des_lng_84","des_lat_84","euclidean_dis","duration","geometry"))]
+AOIs_1 <- merge(AOIs, walkroutes_communi1, by.x = "noco", by.y = "community")
+
+AOIs_RD <- AOIs_1 %>%
+  arrange(desc(route_dis)) %>%
+  top_n(2, route_dis)
+
+bbox_new <- st_bbox(c(xmin =118.7701, xmax = 118.8207, ymax = 32.09924, ymin = 32.05467), crs = st_crs(4326))
+
+current.mode <- tmap_mode("plot")
+map_5 <- tm_shape(background_bu, bbox = bbox_new) +
+  tm_polygons(col = "azure2", border.alpha = 0) + 
+  tm_shape(background_ro) +
+  tm_lines(scale = 0.5, col = "azure2") +
+  tm_shape(walkroutes_sf) +
+  tm_lines(scale = 0.5, col = "azure4") +
+  tm_shape(AOIs_1) +
+  tm_polygons("route_dis", n = 4, palette="-RdYlGn", border.alpha = 0, title = "Route distance") + 
+  tm_shape(park_entre_sf) +
+  tm_symbols(size = 0.2, col = "goldenrod1") +
+  tm_shape(AOIs_RD) +
+  tm_text("noco", size = 0.7, auto.placement = TRUE) +
+  tm_layout(title= 'Figure 4(a)', title.size = 0.8, frame = F)
+  
+map_5
+```
+
+### Pedestrian route directness (RPD) {.unnumbered} 
+```{r, Pedestrian route directness (RPD), fig.align = "center", message=F, warning=F}
+AOIs_PRD <- AOIs_1 %>%
+  arrange(desc(PRD)) %>%
+  top_n(2, PRD)
+
+current.mode <- tmap_mode("plot")
+map_6 <- tm_shape(background_bu, bbox = bbox_new) +
+  tm_polygons(col = "azure2", border.alpha = 0) + 
+  tm_shape(background_ro) +
+  tm_lines(scale = 0.5, col = "azure2") +
+  tm_shape(walkroutes_sf) +
+  tm_lines(scale = 0.5, col = "azure4") +
+  tm_shape(AOIs_1) +
+  tm_polygons("PRD", n = 4, palette="-RdYlGn", border.alpha = 0, title = "PRD") + 
+  tm_shape(park_entre_sf) +
+  tm_symbols(size = 0.2, col = "goldenrod1") +
+  tm_shape(AOIs_PRD) +
+  tm_text("noco", size = 0.7, auto.placement = TRUE) +
+  tm_layout(title= 'Figure 4(b)', title.size = 0.8, frame = F)
+  
+map_6
+```
+
+### The number of turns {.unnumbered} 
+```{r, The number of turns, fig.align = "center", message=F, warning=F}
+AOIs_turn <- AOIs_1 %>%
+  arrange(desc(turn)) %>%
+  top_n(2, turn)
+
+current.mode <- tmap_mode("plot")
+map_7 <- tm_shape(background_bu, bbox = bbox_new) +
+  tm_polygons(col = "azure2", border.alpha = 0) + 
+  tm_shape(background_ro) +
+  tm_lines(scale = 0.5, col = "azure2") +
+  tm_shape(walkroutes_sf) +
+  tm_lines(scale = 0.5, col = "azure4") +
+  tm_shape(AOIs_1) +
+  tm_polygons("turn", n = 5, palette="-RdYlGn", border.alpha = 0, title = "The number of turns") + 
+  tm_shape(park_entre_sf) +
+  tm_symbols(size = 0.2, col = "goldenrod1") +
+  tm_shape(AOIs_turn) +
+  tm_text("noco", size = 0.7, auto.placement = TRUE) +
+  tm_shape(park_entre_sf[23,]) +
+  tm_text("park_entrance", size = 0.7, auto.placement = TRUE) +
+  tm_layout(title= 'Figure 4(c)', title.size = 0.8, frame = F)
+  
+map_7
+```
+
+### The number of crossings {.unnumbered} 
+```{r, The number of crossings, fig.align = "center", message=F, warning=F}
+AOIs_cross <- AOIs_1 %>%
+  arrange(desc(cross_road)) %>%
+  top_n(2, cross_road)
+
+current.mode <- tmap_mode("plot")
+map_8 <- tm_shape(background_bu, bbox = bbox_new) +
+  tm_polygons(col = "azure2", border.alpha = 0) + 
+  tm_shape(background_ro) +
+  tm_lines(scale = 0.5, col = "azure2") +
+  tm_shape(walkroutes_sf) +
+  tm_lines(scale = 0.5, col = "azure4") +
+  tm_shape(AOIs_1) +
+  tm_polygons("cross_road", n = 4, palette="-RdYlGn", border.alpha = 0, title = "The number of crossings") + 
+  tm_shape(park_entre_sf) +
+  tm_symbols(size = 0.2, col = "goldenrod1") +
+  tm_shape(AOIs_cross) +
+  tm_text("noco", size = 0.7, auto.placement = TRUE) +
+  tm_shape(park_entre_sf[26,]) +
+  tm_text("park_entrance", size = 0.7, auto.placement = TRUE) +
+  tm_layout(title= 'Figure 4(d)', title.size = 0.8, frame = F)
+  
+map_8
 ```
 
 # Conclusions
+A walking route is an intermediary for understanding the mobility of urban residents and the physical environment. This project provides a perspective for understanding the walkable routes from communities to parks. First, the route networks and walking experiences differ around the urban park considered. Second, this project indicates the remarkable potential to accommodate more walking with landscape management. Scraped geographic data from an online map provided a rapid and simple approach to detect pedestrian sheds and diagnose residents' walking experiences, which can help urban planners and policymakers to assess the service extent and potential capacity of parks, as well as to determine the siting of new parks. Comprehensive tactics on the routes to parks, such as setting up more park entrances, shortening the walking distance by opening gated communities, and improving the pedestrian environment, are suggested to support more residents walking to parks. 
 
-[~200 words]
-
-Clear summary adequately describing the results and putting them in context. Discussion of further questions and ways to continue investigation.
+There are some limitations to this project. First, it focuses on the walking routes from residential buildings to the park, while ignoring users departing from the bus or metro stations and workplaces. Second, due to the fixed and limited data of the online map service used, it was difficult to evaluate some micro-environmental factors (e.g., pavement condition of the walking road and air quality) and immediate environmental factors (e.g., temporary obstacles and building construction). More research into street features that promote walking to parks is expected to refine this method in
+the future.
 
 # References
+1. Blanck, H.M.; Allen, D.; Bashir, Z.; Gordon, N.; Goodman, A.; Merriam, D.; Candace, R. Let’s go to the park today: The role of parks in obesity prevention and improving the public’s health. Child. Obes. 2012 , 8, 423–428.
 
-All sources are cited in a consistent manner
+2. Takano, T.; Nakamura, K.; Watanabe, M. Urban residential environments and senior citizens’ longevity in megacity areas: The importance of walkable green spaces. J. Epidemiol. Community Health 2002 , 56, 913–918.
+
+
+3. Rigolon, A.; Toker, Z.; Gasparian, N. Who has more walkable routes to parks? An environmental justice study of safe routes to parks in neighborhoods of Los Angeles. J. Urban Aff. 2018, 40, 576–591. 
+
+4. Owen, N.; Humpel, N.; Leslie, E.; Bauman, A.; Sallis, J.F. Understanding environmental influences on walking: Review and research agenda. Am. J. Prev. Med. 2004, 27, 67–76.
+
+5. Baidu Map API. 2020. Available online: http://lbsyun.baidu.com/index.php?title=webapi/directionlite-v1 (accessed on 4 March 2020).
+
+6. Shanghai Urban Planning and Land Resources Administration Bureau. Planning Guidance of 15-Minute Community-Life Circle, 1st ed.; Shanghai Urban Planning and Land Resources Administration Bureau: Shanghai, China, 2016; pp. 21–46.
+
+7. Hess, P.; Moudon, A.; Snyder, M.; Stanilov, K. Site design and pedestrian travel. Transp. Res. Rec. 1999 , 1674, 9–19.
+
+8. Scoppa, M.; Bawazir, K.; Alawadi, K. Walking the superblocks: Street layout efficiency and the Sikkak system in Abu Dhabi. Sustain. Cities Soc. 2018, 38, 359–369.
